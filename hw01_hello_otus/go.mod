@@ -1,4 +1,4 @@
-module github.com/serg-lavro/go-study-otus-pro/tree/master/hw01_hello_otus
+module github.com/serg-lavro/go-study-otus-pro/hw01_hello_otus
 
 go 1.23
 
