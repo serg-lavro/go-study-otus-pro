@@ -43,6 +43,15 @@ var text = `Как видите, он  спускается  по  лестни�
 	посидеть у огня и послушать какую-нибудь интересную сказку.
 		В этот вечер...`
 
+var (
+	lessThanTen            = "cat and dog, one dog,two cats and one man"
+	lessThanTenExpected    = []string{"and", "one", "cat", "cats", "dog,", "dog,two", "man"}
+	upperLowerCase         = "нога Нога"
+	upperLowerCaseExpected = []string{"Нога", "нога"}
+	alphabeticSort         = "zero base apple"
+	alphabeticSortExpected = []string{"apple", "base", "zero"}
+)
+
 func TestTop10(t *testing.T) {
 	t.Run("no words in empty string", func(t *testing.T) {
 		require.Len(t, Top10(""), 0)
@@ -77,6 +86,9 @@ func TestTop10(t *testing.T) {
 				"то",        // 4
 			}
 			require.Equal(t, expected, Top10(text))
+			require.Equal(t, lessThanTenExpected, Top10(lessThanTen))
+			require.Equal(t, upperLowerCaseExpected, Top10(upperLowerCase))
+			require.Equal(t, alphabeticSortExpected, Top10(alphabeticSort))
 		}
 	})
 }
