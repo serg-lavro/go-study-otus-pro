@@ -2,6 +2,11 @@ package hw04lrucache
 
 type Key string
 
+type CacheElement struct {
+	ElemValue interface{}
+	ElemKey   Key
+}
+
 type Cache interface {
 	Set(key Key, value interface{}) bool
 	Get(key Key) (interface{}, bool)
@@ -25,29 +30,31 @@ func NewCache(capacity int) Cache {
 func (c *lruCache) Set(key Key, value interface{}) bool {
 	_, ok := c.items[key]
 	if ok {
-		cacheElem := c.items[key]
-		cacheElem.Value = value
-		c.queue.MoveToFront(cacheElem)
+		listItem := c.items[key]
+		ce := listItem.Value.(CacheElement)
+		ce.ElemValue = value
+		listItem.Value = ce
+		c.queue.MoveToFront(listItem)
 		return true
 	}
 
 	if c.capacity == c.queue.Len() {
-		cacheElem := c.queue.Back()
-		c.queue.Remove(cacheElem)
-		delete(c.items, cacheElem.ItemKey)
+		listItem := c.queue.Back()
+		delete(c.items, listItem.Value.(CacheElement).ElemKey)
+		c.queue.Remove(listItem)
 	}
-	cacheElem := c.queue.PushFront(value)
-	cacheElem.ItemKey = key
-	c.items[key] = cacheElem
+	ce := CacheElement{ElemValue: value, ElemKey: key}
+	listItem := c.queue.PushFront(ce)
+	c.items[key] = listItem
 
 	return false
 }
 
 func (c *lruCache) Get(key Key) (interface{}, bool) {
-	elem, ok := c.items[key]
+	li, ok := c.items[key]
 	if ok {
-		c.queue.MoveToFront(elem)
-		return elem.Value, true
+		c.queue.MoveToFront(li)
+		return li.Value.(CacheElement).ElemValue, true
 	}
 	return nil, false
 }
