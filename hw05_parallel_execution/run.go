@@ -10,7 +10,7 @@ var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
 type Task func() error
 
 type MutexMaxErrorCounter struct {
-	l      sync.RWMutex
+	l      sync.Mutex
 	errMax int
 	errCnt int
 }
