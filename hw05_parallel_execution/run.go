@@ -31,21 +31,23 @@ func (mec *MutexMaxErrorCounter) exeeded() bool {
 func Run(tasks []Task, n, m int) error {
 	var wg sync.WaitGroup
 	wg.Add(n)
-	tch := make(chan Task, len(tasks))
+	tch := make(chan Task)
 	errCnt := MutexMaxErrorCounter{errMax: m}
 
 	// spawn goroutins
 	for i := 0; i < n; i++ {
 		go func() {
 			defer wg.Done()
-			for t := range tch {
-				if errCnt.exeeded() {
+			for {
+				t, ok := <-tch
+				if ok {
+					// do task
+					err := t()
+					if err != nil {
+						errCnt.inc()
+					}
+				} else {
 					break
-				}
-				// do task
-				err := t()
-				if err != nil {
-					errCnt.inc()
 				}
 			}
 		}()
@@ -53,6 +55,9 @@ func Run(tasks []Task, n, m int) error {
 
 	// write tasks to channel
 	for _, t := range tasks {
+		if errCnt.exeeded() {
+			break
+		}
 		tch <- t
 	}
 	close(tch)
