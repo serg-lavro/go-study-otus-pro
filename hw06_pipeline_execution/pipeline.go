@@ -1,7 +1,5 @@
 package hw06pipelineexecution
 
-import "sync/atomic"
-
 type (
 	In  = <-chan interface{}
 	Out = In
@@ -10,48 +8,59 @@ type (
 
 type Stage func(in In) (out Out)
 
-func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	var canceled atomic.Bool
-	interimIn := make(Bi)
+func wrapper(st Stage, in In, stop chan struct{}) Out {
+	stOut := st(in)
+	out := make(Bi)
+	var stopped bool
 
-	// goroutine for managing input: receiving and closing
-	go func() {
-		defer close(interimIn)
-		for {
-			i, ok := <-in
-			if !ok || canceled.Load() {
-				return
-			}
-			interimIn <- i
-		}
-	}()
-
-	out := Out(interimIn)
-	for _, st := range stages {
-		out = st(out)
-	}
-
-	// goroutine for collecting output and managing shutdown
-	buf := []interface{}{}
-	finishPipeline := make(chan struct{})
 	go func() {
 		for {
 			select {
-			case <-done:
-				canceled.Store(true)
-				// flushing output so the close of input would propagate through
-				// upstream stages; closing finish channel prior flush for perf
-				close(finishPipeline)
-				for {
-					_, ok := <-out
-					if !ok {
-						break
+			case v, ok := <-stOut:
+				if !ok {
+					if !stopped {
+						close(out)
 					}
+					return
+				}
+				if !stopped {
+					out <- v
+				}
+			case <-stop:
+				if !stopped {
+					close(out)
+					stopped = true
+				}
+			}
+		}
+	}()
+
+	return out
+}
+
+func ExecutePipeline(in In, done In, stages ...Stage) Out {
+	out := in
+	stops := make([]chan struct{}, len(stages))
+	for i, st := range stages {
+		stops[i] = make(chan struct{})
+		out = wrapper(st, out, stops[i])
+	}
+
+	buf := []interface{}{}
+	finishPipeline := make(chan struct{})
+	var canceled bool
+	go func() {
+		defer close(finishPipeline)
+		for {
+			select {
+			case <-done:
+				canceled = true
+				for _, s := range stops {
+					close(s)
 				}
 				return
 			case v, ok := <-out:
 				if !ok {
-					close(finishPipeline)
 					return
 				}
 				buf = append(buf, v)
@@ -60,10 +69,8 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 	}()
 
 	res := make(Bi)
-
 	<-finishPipeline
-
-	if canceled.Load() {
+	if canceled {
 		close(res)
 		return res
 	}
