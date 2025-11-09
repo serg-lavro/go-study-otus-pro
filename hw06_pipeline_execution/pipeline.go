@@ -23,7 +23,7 @@ func wrapper(st Stage, in In, stop In) Out {
 				out <- v
 			case <-stop:
 				close(out)
-				for range stOut {}
+				for range stOut {} //nolint
 				return
 			}
 		}
