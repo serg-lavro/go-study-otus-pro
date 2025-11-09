@@ -8,29 +8,23 @@ type (
 
 type Stage func(in In) (out Out)
 
-func wrapper(st Stage, in In, stop chan struct{}) Out {
+func wrapper(st Stage, in In, stop In) Out {
 	stOut := st(in)
 	out := make(Bi)
-	var stopped bool
 
 	go func() {
 		for {
 			select {
 			case v, ok := <-stOut:
 				if !ok {
-					if !stopped {
-						close(out)
-					}
+					close(out)
 					return
 				}
-				if !stopped {
-					out <- v
-				}
+				out <- v
 			case <-stop:
-				if !stopped {
-					close(out)
-					stopped = true
-				}
+				close(out)
+				for range stOut {}
+				return
 			}
 		}
 	}()
@@ -40,47 +34,9 @@ func wrapper(st Stage, in In, stop chan struct{}) Out {
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
 	out := in
-	stops := make([]chan struct{}, len(stages))
-	for i, st := range stages {
-		stops[i] = make(chan struct{})
-		out = wrapper(st, out, stops[i])
+	for _, st := range stages {
+		out = wrapper(st, out, done)
 	}
 
-	buf := []interface{}{}
-	finishPipeline := make(chan struct{})
-	var canceled bool
-	go func() {
-		defer close(finishPipeline)
-		for {
-			select {
-			case <-done:
-				canceled = true
-				for _, s := range stops {
-					close(s)
-				}
-				return
-			case v, ok := <-out:
-				if !ok {
-					return
-				}
-				buf = append(buf, v)
-			}
-		}
-	}()
-
-	res := make(Bi)
-	<-finishPipeline
-	if canceled {
-		close(res)
-		return res
-	}
-
-	go func() {
-		defer close(res)
-		for _, v := range buf {
-			res <- v
-		}
-	}()
-
-	return res
+	return out
 }
