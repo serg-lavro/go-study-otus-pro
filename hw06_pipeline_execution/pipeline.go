@@ -8,8 +8,7 @@ type (
 
 type Stage func(in In) (out Out)
 
-func wrapper(st Stage, in In, stop In) Out {
-	stOut := st(in)
+func channelRelay(stOut In, stop In) Out {
 	out := make(Bi)
 
 	go func() {
@@ -33,26 +32,11 @@ func wrapper(st Stage, in In, stop In) Out {
 }
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	firstIn := make(Bi)
-	out := In(firstIn)
+	out := channelRelay(in, done)
 	for _, st := range stages {
-		out = wrapper(st, out, done)
+		out = st(out)
+		out = channelRelay(out, done)
 	}
-
-	go func() {
-		defer close(firstIn)
-		for {
-			select {
-			case v, ok := <-in:
-				if !ok {
-					return
-				}
-				firstIn <- v
-			case <-done:
-				return
-			}
-		}
-	}()
 
 	return out
 }
