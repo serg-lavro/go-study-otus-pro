@@ -33,10 +33,26 @@ func wrapper(st Stage, in In, stop In) Out {
 }
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	out := in
+	firstIn := make(Bi)
+	out := In(firstIn)
 	for _, st := range stages {
 		out = wrapper(st, out, done)
 	}
+
+	go func() {
+		defer close(firstIn)
+		for {
+			select {
+			case v, ok := <-in:
+				if !ok {
+					return
+				}
+				firstIn <- v
+			case <-done:
+				return
+			}
+		}
+	}()
 
 	return out
 }
