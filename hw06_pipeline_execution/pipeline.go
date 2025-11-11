@@ -8,34 +8,33 @@ type (
 
 type Stage func(in In) (out Out)
 
-func channelRelay(stOut In, stop In) Out {
-	out := make(Bi)
+func ExecutePipeline(in In, done In, stages ...Stage) Out {
+	channelRelay := func(stOut In) Out {
+		out := make(Bi)
 
-	go func() {
-		for {
-			select {
-			case v, ok := <-stOut:
-				if !ok {
-					close(out)
+		go func() {
+			defer func() { for range stOut {} }() //nolint
+			defer close(out)
+			for {
+				select {
+				case v, ok := <-stOut:
+					if !ok {
+						return
+					}
+					out <- v
+				case <-done:
 					return
 				}
-				out <- v
-			case <-stop:
-				close(out)
-				for range stOut {} //nolint
-				return
 			}
-		}
-	}()
+		}()
 
-	return out
-}
+		return out
+	}
 
-func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	out := channelRelay(in, done)
+	out := channelRelay(in)
 	for _, st := range stages {
 		out = st(out)
-		out = channelRelay(out, done)
+		out = channelRelay(out)
 	}
 
 	return out
