@@ -1,8 +1,8 @@
 package main
 
 import (
-	"testing"
 	"os"
+	"testing"
 )
 
 func TestRunCmd(t *testing.T) {
@@ -17,7 +17,8 @@ func TestRunCmd(t *testing.T) {
 			t.Errorf("Failed to read 'res' file")
 		}
 		got := string(contents)
-		want := "env_reader.go\nenv_reader_test.go\nexecutor.go\nexecutor_test.go\ngo.mod\nmain.go\nREADME.md\nres\nt1.sh\nt2.sh\nt3.sh\ntestdata\ntest.sh\n"
+		want := "env_reader.go\nenv_reader_test.go\nexecutor.go\nexecutor_test.go\n" +
+			"go.mod\nmain.go\nREADME.md\nres\nt1.sh\nt2.sh\nt3.sh\ntestdata\ntest.sh\n"
 		if got != want {
 			t.Errorf("got '%v' want '%v'", got, want)
 		}
@@ -33,7 +34,7 @@ func TestRunCmd(t *testing.T) {
 	})
 
 	t.Run("set VAR=var", func(t *testing.T) {
-		env := Environment{ "VARTEST": {"var", false}}
+		env := Environment{"VARTEST": {"var", false}}
 		cmd := []string{"/bin/bash", "t3.sh"}
 		ret := RunCmd(cmd, env)
 		if ret != 0 {
@@ -50,6 +51,4 @@ func TestRunCmd(t *testing.T) {
 		}
 		os.Remove("res")
 	})
-
-
 }

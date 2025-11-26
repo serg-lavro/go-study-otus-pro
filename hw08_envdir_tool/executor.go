@@ -1,19 +1,18 @@
 package main
 
 import (
-	"os/exec"
+	"errors"
 	"os"
+	"os/exec"
 )
 
 // RunCmd runs a command + arguments (cmd) with environment variables from env.
 func RunCmd(cmd []string, env Environment) (returnCode int) {
 	cVec := []string{}
-	for _, cw := range cmd {
-		cVec = append(cVec, cw)
-	}
-	c := exec.Command(cVec[0], cVec[1:]...)
+	cVec = append(cVec, cmd...)
+	c := exec.Command(cVec[0], cVec[1:]...) //nolint
 	cEnv := os.Environ()
-	for k,v := range env {
+	for k, v := range env {
 		varStr := k + "=" + v.Value
 		cEnv = append(cEnv, varStr)
 	}
@@ -22,11 +21,11 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	err := c.Run()
-
-    if err != nil {
-        if exitErr, ok := err.(*exec.ExitError); ok {
-            return exitErr.ExitCode()
-        }
-    }
-    return 0
+	if err != nil {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
+			return exitErr.ExitCode()
+		}
+	}
+	return 0
 }

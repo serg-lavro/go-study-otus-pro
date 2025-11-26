@@ -2,8 +2,9 @@ package main
 
 import (
 	"bufio"
-	"os"
+	"fmt"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -18,37 +19,32 @@ type EnvValue struct {
 func isEmpty(f *os.File) bool {
 	fInfo, _ := f.Stat()
 
-	if fInfo.Size() == 0 {
-		return true
-	}
-	return false
+	return fInfo.Size() == 0
 }
 
 func processFile(fname string) (EnvValue, error) {
 	var res EnvValue
-    file, err := os.Open(fname)
-    if err != nil {
-        log.Fatalf("failed to open file: %s", err)
-		return res, err
-    }
-    defer file.Close()
+	file, err := os.Open(fname)
+	if err != nil {
+		return res, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
 
 	if isEmpty(file) {
 		return EnvValue{"", true}, nil
 	}
 
-    scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(file)
 
-    if scanner.Scan() {
-        firstLine := scanner.Text()
+	if scanner.Scan() {
+		firstLine := scanner.Text()
 		cleaned := strings.ReplaceAll(firstLine, "\x00", "\n")
-		res.Value = strings.TrimRight(cleaned," \t")
-    }
+		res.Value = strings.TrimRight(cleaned, " \t")
+	}
 
-    if err := scanner.Err(); err != nil {
-        log.Fatalf("error reading file: %s", err)
-		return res, err
-    }
+	if err := scanner.Err(); err != nil {
+		return res, fmt.Errorf("error reading file: %w", err)
+	}
 	return res, nil
 }
 
@@ -68,8 +64,8 @@ func ReadDir(dir string) (Environment, error) {
 		if strings.Contains(name, "=") {
 			continue
 		}
-		full_name := dir + "/" + name
-		envVar, err := processFile(full_name)
+		fullName := dir + "/" + name
+		envVar, err := processFile(fullName)
 		if err != nil {
 			return res, err
 		}
