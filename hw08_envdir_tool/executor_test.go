@@ -17,8 +17,7 @@ func TestRunCmd(t *testing.T) {
 			t.Errorf("Failed to read 'res' file")
 		}
 		got := string(contents)
-		want := "env_reader.go\nenv_reader_test.go\nexecutor.go\nexecutor_test.go\n" +
-			"go.mod\nmain.go\nREADME.md\nres\nt1.sh\nt2.sh\nt3.sh\ntestdata\ntest.sh\n"
+		want := "echo.sh\nenv\n"
 		if got != want {
 			t.Errorf("got '%v' want '%v'", got, want)
 		}

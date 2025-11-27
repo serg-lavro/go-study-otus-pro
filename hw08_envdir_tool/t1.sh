@@ -1,1 +1,1 @@
-ls > res
+ls testdata > res
