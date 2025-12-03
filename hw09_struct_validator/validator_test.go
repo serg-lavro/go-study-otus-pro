@@ -37,6 +37,9 @@ type (
 )
 
 func TestValidate(t *testing.T) {
+	t.Run("tiny tests", func (t *testing.T) {
+		Validate(App{"hello"})
+	})
 	tests := []struct {
 		in          interface{}
 		expectedErr error
