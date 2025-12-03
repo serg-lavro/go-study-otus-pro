@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/cheggaaa/pb/v3"
 )
@@ -13,7 +14,15 @@ var (
 	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
 	ErrInputFileDoesNotExist = errors.New("input file does not exist")
 	ErrCreateOutputFile      = errors.New("failed to create output file")
+	ErrSelfCopy              = errors.New("'from' file is the same as 'to' file")
 )
+
+func selfCopy(out, in string) bool {
+	absOut, _ := filepath.Abs(out)
+	absIn, _ := filepath.Abs(in)
+
+	return absIn == absOut
+}
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
 	fromFile, err := os.Open(fromPath)
@@ -22,10 +31,18 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	}
 	defer fromFile.Close()
 
+	if selfCopy(fromPath, toPath) {
+		return ErrSelfCopy
+	}
+
 	fi, _ := fromFile.Stat()
 	size := fi.Size()
 	if offset > size {
 		return ErrOffsetExceedsFileSize
+	}
+
+	if size == 0 {
+		return ErrUnsupportedFile
 	}
 
 	toFile, err := os.Create(toPath)

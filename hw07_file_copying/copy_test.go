@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -72,4 +73,18 @@ func TestCopy(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("self copy", func(t *testing.T) {
+		err := Copy(fromFile, fromFile, 0, 0)
+		if !errors.Is(err, ErrSelfCopy) {
+			t.Errorf("The case for the same 'from' and 'to' is not handled")
+		}
+	})
+
+	t.Run("from /dev/urandom (size=0)", func(t *testing.T) {
+		err := Copy("/dev/urandom", toFile, 0, 0)
+		if !errors.Is(err, ErrUnsupportedFile) {
+			t.Errorf("Failed to handle copying from /dev/urandom")
+		}
+	})
 }
