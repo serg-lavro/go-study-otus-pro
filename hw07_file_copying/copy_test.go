@@ -81,10 +81,17 @@ func TestCopy(t *testing.T) {
 		}
 	})
 
-	t.Run("from /dev/urandom (size=0)", func(t *testing.T) {
+	t.Run("from /dev/urandom", func(t *testing.T) {
 		err := Copy("/dev/urandom", toFile, 0, 0)
 		if !errors.Is(err, ErrUnsupportedFile) {
 			t.Errorf("Failed to handle copying from /dev/urandom")
+		}
+	})
+
+	t.Run("from /dev/zero", func(t *testing.T) {
+		err := Copy("/dev/zero", toFile, 0, 0)
+		if !errors.Is(err, ErrUnsupportedFile) {
+			t.Errorf("Failed to handle copying from /dev/zero")
 		}
 	})
 }
