@@ -34,11 +34,19 @@ type (
 		Code int    `validate:"in:200,404,500"`
 		Body string `json:"omitempty"`
 	}
+
+	TestoStruct struct {
+		Number int `json:"sosos" validate:"min:8|max:11"`
+		Str string `validate:"in:some,boam,tam|len:3"`
+	}
 )
 
 func TestValidate(t *testing.T) {
 	t.Run("tiny tests", func (t *testing.T) {
 		Validate(App{"hello"})
+	})
+	t.Run("less tiny test", func (t *testing.T) {
+		Validate(TestoStruct{8, "som"})
 	})
 	tests := []struct {
 		in          interface{}
