@@ -39,6 +39,10 @@ type (
 		Number int `json:"sosos" validate:"min:8|max:11"`
 		Str string `validate:"in:some,boam,tam|len:3"`
 	}
+
+	TripleValidationStruct struct {
+		Data string `validate:"len:5|in:hello,world,lesgo|regexp:^\\w+$"`
+	}
 )
 
 func TestValidate(t *testing.T) {
@@ -48,15 +52,130 @@ func TestValidate(t *testing.T) {
 	t.Run("less tiny test", func (t *testing.T) {
 		Validate(TestoStruct{8, "som"})
 	})
+
 	tests := []struct {
 		in          interface{}
 		expectedErr error
 	}{
+		// Valid cases
 		{
-			// Place your code here.
+			in: App{Version: "12345"},
+			expectedErr: nil,
 		},
-		// ...
-		// Place your code here.
+		{
+			in: TestoStruct {Number: 10, Str: "tam"},
+			expectedErr: nil,
+		},
+		{
+			in: User {
+				ID: string(make([]byte, 36)),
+				Name: "John",
+				Age: 25,
+				Email: "user@example.com",
+				Role: "admin",
+				Phones: []string{"12345678901"},
+			},
+			expectedErr: nil,
+		},
+		{
+			in: Response{Code: 200},
+			expectedErr: nil,
+		},
+		{
+			in: Token{},
+			expectedErr: nil,
+		},
+		{
+			in: TripleValidationStruct {
+				Data: "hello",
+			},
+			expectedErr: nil,
+		},
+		// Invalid cases
+		{
+			in: App{Version: "1234"},
+			expectedErr: ValidationErrors {
+				{Field: "Version", Err: ErrLenValidation},
+			},
+		},
+		{
+			in: TestoStruct{Number: 5, Str: "tam"},
+			expectedErr: ValidationErrors {
+				{Field: "Number", Err: ErrMinValidation},
+			},
+		},
+		{
+			in: User{Age: 15},
+			expectedErr: ValidationErrors { // Errors include validation failures due to zero init of struct fields
+				{Field: "ID", Err: ErrLenValidation},
+				{Field: "Age", Err: ErrMinValidation},
+				{Field: "Email", Err: ErrRegexpValidation},
+				{Field: "UserRole", Err: ErrInValidation},
+			},
+		},
+		{
+			in: TestoStruct{Number: 8, Str: "wrong"},
+			expectedErr: ValidationErrors{
+				{Field: "Str", Err: ErrInValidation},
+				{Field: "Str", Err: ErrLenValidation},
+			},
+		},
+		{
+			in: TestoStruct {
+				Number: 5,
+				Str: "no",
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Number", Err: ErrMinValidation},
+				{Field: "Str", Err: ErrInValidation},
+				{Field: "Str", Err: ErrLenValidation},
+			},
+		},
+		{
+			in: User{
+				ID: "123456123456123456123456123456123456", Age: 21, Email: "bad email", Role: "admin",
+				Phones: []string{ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11" },
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Email", Err: ErrRegexpValidation},
+			},
+		},
+		{
+			in: TripleValidationStruct{
+				Data: "hell",
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Data", Err: ErrLenValidation},
+				{Field: "Data", Err: ErrInValidation},
+			},
+		},
+		{
+			in: TripleValidationStruct{
+				Data: "vorld",
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Data", Err: ErrInValidation},
+			},
+		},
+		{
+			in: TripleValidationStruct{
+				Data: "hello!",
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Data", Err: ErrLenValidation},
+				{Field: "Data", Err: ErrInValidation},
+				{Field: "Data", Err: ErrRegexpValidation},
+			},
+		},
+		{
+			in: TripleValidationStruct{
+				Data: "les_go",
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Data", Err: ErrLenValidation},
+				{Field: "Data", Err: ErrInValidation},
+			},
+		},
 	}
 
 	for i, tt := range tests {
@@ -64,8 +183,23 @@ func TestValidate(t *testing.T) {
 			tt := tt
 			t.Parallel()
 
-			// Place your code here.
-			_ = tt
+			err := Validate(tt.in)
+
+			if tt.expectedErr == nil {
+				if err != nil {
+						t.Errorf("Validate(%T) error = %v", tt.in, err)
+				}
+				return
+			}
+
+			if err == nil {
+				t.Errorf("Validate(%T) error = nil, want error", tt.in)
+				return
+			}
+
+			if got := err.Error(); got != tt.expectedErr.Error() {
+				t.Errorf("Validate(%T) error %q, want %q", tt.in, got, tt.expectedErr.Error())
+			}
 		})
 	}
 }

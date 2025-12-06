@@ -1,11 +1,22 @@
 package hw09structvalidator
 
 import (
-	"fmt"
+	"errors"
+//	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 	"slices"
 	"strconv"
+)
+
+var (
+	ErrMinValidation   = errors.New("min validation failed")
+	ErrMaxValidation   = errors.New("max validation failed")
+	ErrLenValidation   = errors.New("len validation failed")
+	ErrInValidation    = errors.New("in validation failed")
+	ErrRegexpValidation = errors.New("regexp validation failed")
+	ErrSOME				= errors.New("SOME")
 )
 
 type ValidationError struct {
@@ -16,7 +27,17 @@ type ValidationError struct {
 type ValidationErrors []ValidationError
 
 func (v ValidationErrors) Error() string {
-	panic("implement me")
+	if len(v) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	for i, ve := range v {
+		if i > 0 {
+			sb.WriteString("; ")
+		}
+		sb.WriteString(ve.Err.Error())
+	}
+	return sb.String()
 }
 
 type ValidationRequirenment struct {
@@ -45,47 +66,82 @@ func validateIn(fieldVal, set string) bool {
 	return slices.Contains(allowedSet, fieldVal)
 }
 
-func validationFailedInt(fieldName string, val int, tag reflect.StructTag) (ValidationError, bool) {
+func validationFailedInt(fieldName string, val int, tag reflect.StructTag) (ValidationErrors, bool) {
+	errs := ValidationErrors{}
+	failed := false
 	reqs := parseRequirenments(tag)
-	fmt.Println("[VALIDATE] ", fieldName, val, reqs)
 	for _, r := range(reqs) {
 		switch r.reqType {
 		case "min":
-			if strconv.Atoi() < val {
-				fmt.Println("min failed: ", val)
+			rval, _ := strconv.Atoi(r.reqVal)
+			if rval > val {
+				errs = append(errs, ValidationError{
+					Field: fieldName,
+					Err: ErrMinValidation,
+					})
+				failed = true
 			}
 		case "max":
-			if val > strconv.Atoi() {
-				fmt.Println("max failed: ", val)
+			rval, _ := strconv.Atoi(r.reqVal)
+			if val > rval {
+				errs = append(errs, ValidationError{
+					Field: fieldName,
+					Err: ErrMaxValidation,
+					})
+				failed = true
 			}
 		case "in":
 			if !validateIn(strconv.Itoa(val), r.reqVal) {
-				fmt.Println("in failed: ", val)
+				errs = append(errs, ValidationError{
+					Field: fieldName,
+					Err: ErrInValidation,
+					})
+				failed = true
 			}
-		default:
 		}
 	}
-	return ValidationError{}, false
+	return errs, failed
 }
 
-func validationFailedString(fieldName string, val string, tag reflect.StructTag) (ValidationError, bool) {
+func validationFailedString(fieldName string, val string, tag reflect.StructTag) (ValidationErrors, bool) {
+	errs := ValidationErrors{}
+	failed := false
 	reqs := parseRequirenments(tag)
-	fmt.Println("[VALIDATE] ", fieldName, val, reqs)
 	for _, r := range(reqs) {
 		switch r.reqType {
 		case "in":
 			if !validateIn(val, r.reqVal) {
-				fmt.Println("in failed: ", val)
+				errs = append(errs, ValidationError{
+					Field: fieldName,
+					Err: ErrInValidation,
+					})
+				failed = true
 			}
-		case "ln":
-		case "reqexp":
-		default:
+		case "len":
+			rval, _ := strconv.Atoi(r.reqVal)
+			if rval != len(val) {
+				errs = append(errs, ValidationError{
+					Field: fieldName,
+					Err: ErrLenValidation,
+					})
+				failed = true
+			}
+		case "regexp":
+			matched, _ := regexp.MatchString(r.reqVal, val)
+			if !matched {
+				errs = append(errs, ValidationError{
+					Field: fieldName,
+					Err: ErrRegexpValidation,
+					})
+				failed = true
+			}
 		}
 	}
-	return ValidationError{}, false
+	return errs, failed
 }
 
 func Validate(v interface{}) error {
+	var errors ValidationErrors
 	rv := reflect.ValueOf(v)
 	rt := rv.Type()
 
@@ -97,12 +153,27 @@ func Validate(v interface{}) error {
 			ft := f.Type
 			switch ft.Kind() {
 			case reflect.Int:
-				validationFailedInt(f.Name, int(fv.Int()), f.Tag)
+				errs, failed := validationFailedInt(f.Name, int(fv.Int()), f.Tag)
+				if failed {
+					for _, e := range(errs) {
+						errors = append(errors, e)
+					}
+				}
 			case reflect.String:
-				validationFailedString(f.Name, fv.String(), f.Tag)
+				errs, failed := validationFailedString(f.Name, fv.String(), f.Tag)
+				if failed {
+					for _, e := range(errs) {
+						errors = append(errors, e)
+					}
+				}
 			}
 		}
 
 	}
+
+	if len(errors) > 0 {
+		return errors
+	}
+
 	return nil
 }
