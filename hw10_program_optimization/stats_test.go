@@ -66,4 +66,15 @@ func TestGetDomainStat(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, DomainStat{}, result)
 	})
+
+	t.Run("bad json type", func(t *testing.T) {
+		badData := `{"Id":1,"Name":"Howard Mendoza","Username":"0Oliver","Email":123,"Phone":"6-866-899-36-79","Password":"InAQJvsq","Address":"Blackbird Place 25"}`
+		_, err := GetDomainStat(bytes.NewBufferString(badData), "com")
+		require.Error(t, err)
+	})
+	t.Run("bad json syntax", func(t *testing.T) {
+		badData := `{"Id":1,"Name":"Howard Mendoza","Username":"0Oliver","Email":user@example.com,"Phone":"6-866-899-36-79","Password":"InAQJvsq","Address":"Blackbird Place 25"}`
+		_, err := GetDomainStat(bytes.NewBufferString(badData), "com")
+		require.Error(t, err)
+	})
 }
