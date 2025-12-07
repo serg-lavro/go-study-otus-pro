@@ -2,7 +2,7 @@ package hw09structvalidator
 
 import (
 	"errors"
-	//	"fmt"
+	"fmt"
 	"reflect"
 	"regexp"
 	"slices"
@@ -140,6 +140,37 @@ func validationFailedString(fieldName string, val string, tag reflect.StructTag)
 	return errs, failed
 }
 
+func validateSlice(f reflect.StructField, fv reflect.Value) ValidationErrors {
+	var errs ValidationErrors
+	elemKind := fv.Type().Elem().Kind()
+
+	switch elemKind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		for i := 0; i < fv.Len(); i++ {
+			elem := fv.Index(i)
+			ve, failed := validationFailedInt(fmt.Sprintf("%s[%d]", f.Name, i), int(elem.Int()), f.Tag)
+			if failed {
+				errs = append(errs, ve...)
+			}
+		}
+	case reflect.String:
+		for i := 0; i < fv.Len(); i++ {
+			elem := fv.Index(i)
+			ve, failed := validationFailedString(fmt.Sprintf("%s[%d]", f.Name, i), elem.String(), f.Tag)
+			if failed {
+				errs = append(errs, ve...)
+			}
+		}
+	case reflect.Invalid, reflect.Bool, reflect.Uint, reflect.Uint8, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64,
+		reflect.Complex64, reflect.Complex128, reflect.Array, reflect.Chan, reflect.Func,
+		reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice, reflect.Struct,
+		reflect.UnsafePointer:
+	}
+
+	return errs
+}
+
 func Validate(v interface{}) error {
 	var errors ValidationErrors
 	rv := reflect.ValueOf(v)
@@ -162,10 +193,13 @@ func Validate(v interface{}) error {
 				if failed {
 					errors = append(errors, errs...)
 				}
+			case reflect.Slice:
+				sliceErrs := validateSlice(f, fv)
+				errors = append(errors, sliceErrs...)
 			case reflect.Invalid, reflect.Bool, reflect.Uint, reflect.Uint8, reflect.Uint16,
 				reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64,
 				reflect.Complex64, reflect.Complex128, reflect.Array, reflect.Chan, reflect.Func,
-				reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice, reflect.Struct,
+				reflect.Interface, reflect.Map, reflect.Pointer, reflect.Struct,
 				reflect.UnsafePointer:
 			default:
 			}

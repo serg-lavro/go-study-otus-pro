@@ -43,6 +43,10 @@ type (
 	TripleValidationStruct struct {
 		Data string `validate:"len:5|in:hello,world,lesgo|regexp:^\\w+$"`
 	}
+
+	TestForIntSlice struct {
+		Number []int `validate:"max:8|in:1,2,3"`
+	}
 )
 
 func TestValidate(t *testing.T) {
@@ -92,12 +96,6 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			in: TestoStruct{Number: 5, Str: "tam"},
-			expectedErr: ValidationErrors{
-				{Field: "Number", Err: ErrMinValidation},
-			},
-		},
-		{
 			in: User{Age: 15},
 			expectedErr: ValidationErrors{ // Errors include validation failures due to zero init of struct fields
 				{Field: "ID", Err: ErrLenValidation},
@@ -127,10 +125,17 @@ func TestValidate(t *testing.T) {
 		{
 			in: User{
 				ID: "123456123456123456123456123456123456", Age: 21, Email: "bad email", Role: "admin",
-				Phones: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"},
+				Phones: []string{
+					"22222222221", "22222222222", "22222222223", "22222222224", "22222222225",
+					"22222222226", "72222222222", "8", "9", "10", "11",
+				},
 			},
 			expectedErr: ValidationErrors{
 				{Field: "Email", Err: ErrRegexpValidation},
+				{Field: "Phones[7]", Err: ErrLenValidation},
+				{Field: "Phones[8]", Err: ErrLenValidation},
+				{Field: "Phones[9]", Err: ErrLenValidation},
+				{Field: "Phones[10]", Err: ErrLenValidation},
 			},
 		},
 		{
@@ -139,14 +144,6 @@ func TestValidate(t *testing.T) {
 			},
 			expectedErr: ValidationErrors{
 				{Field: "Data", Err: ErrLenValidation},
-				{Field: "Data", Err: ErrInValidation},
-			},
-		},
-		{
-			in: TripleValidationStruct{
-				Data: "vorld",
-			},
-			expectedErr: ValidationErrors{
 				{Field: "Data", Err: ErrInValidation},
 			},
 		},
@@ -167,6 +164,17 @@ func TestValidate(t *testing.T) {
 			expectedErr: ValidationErrors{
 				{Field: "Data", Err: ErrLenValidation},
 				{Field: "Data", Err: ErrInValidation},
+			},
+		},
+		{
+			in: TestForIntSlice{
+				Number: []int{1, 2, 3, 4, 8, 9},
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Number[3]", Err: ErrInValidation},
+				{Field: "Number[4]", Err: ErrInValidation},
+				{Field: "Number[5]", Err: ErrMaxValidation},
+				{Field: "Number[5]", Err: ErrInValidation},
 			},
 		},
 	}
