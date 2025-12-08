@@ -54,6 +54,7 @@ linters:
             - '!$test'
           allow:
             - $gostd
+            - github.com/cheggaaa/pb/v3
         Test:
           files:
             - $test
