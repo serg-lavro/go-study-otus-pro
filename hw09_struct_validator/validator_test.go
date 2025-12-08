@@ -2,6 +2,7 @@ package hw09structvalidator
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -72,31 +73,31 @@ type (
 func TestBadTags(t *testing.T) {
 	t.Run("bad tag value for max", func(t *testing.T) {
 		err := Validate(TestBadTagMax{1})
-		if err != ErrInvalidTag {
+		if !errors.Is(err, ErrInvalidTag) {
 			t.Errorf("failed to receive tag error")
 		}
 	})
 	t.Run("bad tag value for min", func(t *testing.T) {
 		err := Validate(TestBadTagMin{1})
-		if err != ErrInvalidTag {
+		if !errors.Is(err, ErrInvalidTag) {
 			t.Errorf("failed to receive tag error")
 		}
 	})
 	t.Run("bad tag value int type", func(t *testing.T) {
 		err := Validate(TestBadTagForInt{1})
-		if err != ErrInvalidTag {
+		if !errors.Is(err, ErrInvalidTag) {
 			t.Errorf("failed to receive tag error")
 		}
 	})
 	t.Run("bad tag value for len", func(t *testing.T) {
 		err := Validate(TestBadTagLen{"abc"})
-		if err != ErrInvalidTag {
+		if !errors.Is(err, ErrInvalidTag) {
 			t.Errorf("failed to receive tag error")
 		}
 	})
 	t.Run("bad tag value for regexp", func(t *testing.T) {
 		err := Validate(TestBadTagRegexp{"abc"})
-		if err != ErrInvalidTag {
+		if !errors.Is(err, ErrInvalidTag) {
 			t.Errorf("failed to receive tag error")
 		}
 	})

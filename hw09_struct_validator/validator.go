@@ -190,42 +190,44 @@ func Validate(v interface{}) error {
 	rv := reflect.ValueOf(v)
 	rt := rv.Type()
 
-	if rt.Kind() == reflect.Struct {
-		st := reflect.TypeOf(v)
-		for i := 0; i < st.NumField(); i++ {
-			f := st.Field(i)
-			fv := rv.Field(i)
-			ft := f.Type
-			switch ft.Kind() {
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				intErrors, e := validateInt(f.Name, int(fv.Int()), f.Tag)
-				if e != nil {
-					return e
-				}
-				if intErrors != nil {
-					errors = append(errors, intErrors...)
-				}
-			case reflect.String:
-				stringErrors, e := validateString(f.Name, fv.String(), f.Tag)
-				if e != nil {
-					return e
-				}
-				if stringErrors != nil {
-					errors = append(errors, stringErrors...)
-				}
-			case reflect.Slice:
-				sliceErrs, e := validateSlice(f, fv)
-				if e != nil {
-					return e
-				}
-				errors = append(errors, sliceErrs...)
-			case reflect.Invalid, reflect.Bool, reflect.Uint, reflect.Uint8, reflect.Uint16,
-				reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64,
-				reflect.Complex64, reflect.Complex128, reflect.Array, reflect.Chan, reflect.Func,
-				reflect.Interface, reflect.Map, reflect.Pointer, reflect.Struct,
-				reflect.UnsafePointer:
-			default:
+	if rt.Kind() != reflect.Struct {
+		return nil
+	}
+
+	st := reflect.TypeOf(v)
+	for i := 0; i < st.NumField(); i++ {
+		f := st.Field(i)
+		fv := rv.Field(i)
+		ft := f.Type
+		switch ft.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			intErrors, e := validateInt(f.Name, int(fv.Int()), f.Tag)
+			if e != nil {
+				return e
 			}
+			if intErrors != nil {
+				errors = append(errors, intErrors...)
+			}
+		case reflect.String:
+			stringErrors, e := validateString(f.Name, fv.String(), f.Tag)
+			if e != nil {
+				return e
+			}
+			if stringErrors != nil {
+				errors = append(errors, stringErrors...)
+			}
+		case reflect.Slice:
+			sliceErrs, e := validateSlice(f, fv)
+			if e != nil {
+				return e
+			}
+			errors = append(errors, sliceErrs...)
+		case reflect.Invalid, reflect.Bool, reflect.Uint, reflect.Uint8, reflect.Uint16,
+			reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64,
+			reflect.Complex64, reflect.Complex128, reflect.Array, reflect.Chan, reflect.Func,
+			reflect.Interface, reflect.Map, reflect.Pointer, reflect.Struct,
+			reflect.UnsafePointer:
+		default:
 		}
 	}
 
