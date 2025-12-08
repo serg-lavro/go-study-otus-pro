@@ -47,7 +47,60 @@ type (
 	TestForIntSlice struct {
 		Number []int `validate:"max:8|in:1,2,3"`
 	}
+
+	TestBadTagMax struct {
+		Number int `validate:"max:abc"`
+	}
+
+	TestBadTagMin struct {
+		Number int `validate:"min:abc"`
+	}
+
+	TestBadTagForInt struct {
+		Number int `validate:"regexp:^\\w+$"`
+	}
+
+	TestBadTagLen struct {
+		Name string `validate:"len:s"`
+	}
+
+	TestBadTagRegexp struct {
+		Name string `validate:"regexp:[a-z"`
+	}
 )
+
+func TestBadTags(t *testing.T) {
+	t.Run("bad tag value for max", func(t *testing.T) {
+		err := Validate(TestBadTagMax{1})
+		if err != ErrInvalidTag {
+			t.Errorf("failed to receive tag error")
+		}
+	})
+	t.Run("bad tag value for min", func(t *testing.T) {
+		err := Validate(TestBadTagMin{1})
+		if err != ErrInvalidTag {
+			t.Errorf("failed to receive tag error")
+		}
+	})
+	t.Run("bad tag value int type", func(t *testing.T) {
+		err := Validate(TestBadTagForInt{1})
+		if err != ErrInvalidTag {
+			t.Errorf("failed to receive tag error")
+		}
+	})
+	t.Run("bad tag value for len", func(t *testing.T) {
+		err := Validate(TestBadTagLen{"abc"})
+		if err != ErrInvalidTag {
+			t.Errorf("failed to receive tag error")
+		}
+	})
+	t.Run("bad tag value for regexp", func(t *testing.T) {
+		err := Validate(TestBadTagRegexp{"abc"})
+		if err != ErrInvalidTag {
+			t.Errorf("failed to receive tag error")
+		}
+	})
+}
 
 func TestValidate(t *testing.T) {
 	tests := []struct {

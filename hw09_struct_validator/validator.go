@@ -16,7 +16,7 @@ var (
 	ErrLenValidation    = errors.New("len validation failed")
 	ErrInValidation     = errors.New("in validation failed")
 	ErrRegexpValidation = errors.New("regexp validation failed")
-	ErrSOME             = errors.New("SOME")
+	ErrInvalidTag       = errors.New("invalid Tag")
 )
 
 type ValidationError struct {
@@ -66,29 +66,32 @@ func validateIn(fieldVal, set string) bool {
 	return slices.Contains(allowedSet, fieldVal)
 }
 
-func validationFailedInt(fieldName string, val int, tag reflect.StructTag) (ValidationErrors, bool) {
+func validateInt(fieldName string, val int, tag reflect.StructTag) (ValidationErrors, error) {
 	errs := ValidationErrors{}
-	failed := false
 	reqs := parseRequirenments(tag)
 	for _, r := range reqs {
 		switch r.reqType {
 		case "min":
-			rval, _ := strconv.Atoi(r.reqVal)
+			rval, e := strconv.Atoi(r.reqVal)
+			if e != nil {
+				return nil, ErrInvalidTag
+			}
 			if rval > val {
 				errs = append(errs, ValidationError{
 					Field: fieldName,
 					Err:   ErrMinValidation,
 				})
-				failed = true
 			}
 		case "max":
-			rval, _ := strconv.Atoi(r.reqVal)
+			rval, e := strconv.Atoi(r.reqVal)
+			if e != nil {
+				return nil, ErrInvalidTag
+			}
 			if val > rval {
 				errs = append(errs, ValidationError{
 					Field: fieldName,
 					Err:   ErrMaxValidation,
 				})
-				failed = true
 			}
 		case "in":
 			if !validateIn(strconv.Itoa(val), r.reqVal) {
@@ -96,16 +99,16 @@ func validationFailedInt(fieldName string, val int, tag reflect.StructTag) (Vali
 					Field: fieldName,
 					Err:   ErrInValidation,
 				})
-				failed = true
 			}
+		default:
+			return nil, ErrInvalidTag
 		}
 	}
-	return errs, failed
+	return errs, nil
 }
 
-func validationFailedString(fieldName string, val string, tag reflect.StructTag) (ValidationErrors, bool) {
+func validateString(fieldName string, val string, tag reflect.StructTag) (ValidationErrors, error) {
 	errs := ValidationErrors{}
-	failed := false
 	reqs := parseRequirenments(tag)
 	for _, r := range reqs {
 		switch r.reqType {
@@ -115,32 +118,37 @@ func validationFailedString(fieldName string, val string, tag reflect.StructTag)
 					Field: fieldName,
 					Err:   ErrInValidation,
 				})
-				failed = true
 			}
 		case "len":
-			rval, _ := strconv.Atoi(r.reqVal)
+			rval, e := strconv.Atoi(r.reqVal)
+			if e != nil {
+				return nil, ErrInvalidTag
+			}
 			if rval != len(val) {
 				errs = append(errs, ValidationError{
 					Field: fieldName,
 					Err:   ErrLenValidation,
 				})
-				failed = true
 			}
 		case "regexp":
-			matched, _ := regexp.MatchString(r.reqVal, val)
+			matched, e := regexp.MatchString(r.reqVal, val)
+			if e != nil {
+				return nil, ErrInvalidTag
+			}
 			if !matched {
 				errs = append(errs, ValidationError{
 					Field: fieldName,
 					Err:   ErrRegexpValidation,
 				})
-				failed = true
 			}
+		default:
+			return nil, ErrInvalidTag
 		}
 	}
-	return errs, failed
+	return errs, nil
 }
 
-func validateSlice(f reflect.StructField, fv reflect.Value) ValidationErrors {
+func validateSlice(f reflect.StructField, fv reflect.Value) (ValidationErrors, error) {
 	var errs ValidationErrors
 	elemKind := fv.Type().Elem().Kind()
 
@@ -148,16 +156,22 @@ func validateSlice(f reflect.StructField, fv reflect.Value) ValidationErrors {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		for i := 0; i < fv.Len(); i++ {
 			elem := fv.Index(i)
-			ve, failed := validationFailedInt(fmt.Sprintf("%s[%d]", f.Name, i), int(elem.Int()), f.Tag)
-			if failed {
+			ve, e := validateInt(fmt.Sprintf("%s[%d]", f.Name, i), int(elem.Int()), f.Tag)
+			if e != nil {
+				return nil, e
+			}
+			if ve != nil {
 				errs = append(errs, ve...)
 			}
 		}
 	case reflect.String:
 		for i := 0; i < fv.Len(); i++ {
 			elem := fv.Index(i)
-			ve, failed := validationFailedString(fmt.Sprintf("%s[%d]", f.Name, i), elem.String(), f.Tag)
-			if failed {
+			ve, e := validateString(fmt.Sprintf("%s[%d]", f.Name, i), elem.String(), f.Tag)
+			if e != nil {
+				return nil, e
+			}
+			if ve != nil {
 				errs = append(errs, ve...)
 			}
 		}
@@ -168,7 +182,7 @@ func validateSlice(f reflect.StructField, fv reflect.Value) ValidationErrors {
 		reflect.UnsafePointer:
 	}
 
-	return errs
+	return errs, nil
 }
 
 func Validate(v interface{}) error {
@@ -184,17 +198,26 @@ func Validate(v interface{}) error {
 			ft := f.Type
 			switch ft.Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				errs, failed := validationFailedInt(f.Name, int(fv.Int()), f.Tag)
-				if failed {
-					errors = append(errors, errs...)
+				intErrors, e := validateInt(f.Name, int(fv.Int()), f.Tag)
+				if e != nil {
+					return e
+				}
+				if intErrors != nil {
+					errors = append(errors, intErrors...)
 				}
 			case reflect.String:
-				errs, failed := validationFailedString(f.Name, fv.String(), f.Tag)
-				if failed {
-					errors = append(errors, errs...)
+				stringErrors, e := validateString(f.Name, fv.String(), f.Tag)
+				if e != nil {
+					return e
+				}
+				if stringErrors != nil {
+					errors = append(errors, stringErrors...)
 				}
 			case reflect.Slice:
-				sliceErrs := validateSlice(f, fv)
+				sliceErrs, e := validateSlice(f, fv)
+				if e != nil {
+					return e
+				}
 				errors = append(errors, sliceErrs...)
 			case reflect.Invalid, reflect.Bool, reflect.Uint, reflect.Uint8, reflect.Uint16,
 				reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64,
