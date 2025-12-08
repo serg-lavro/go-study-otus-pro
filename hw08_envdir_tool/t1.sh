@@ -1,0 +1,1 @@
+ls testdata > res
