@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"testing"
 	"strconv"
 	"strings"
+	"testing"
 )
 
 type UserRole string
