@@ -74,7 +74,7 @@ func validateInt(fieldName string, val int, tag reflect.StructTag) (ValidationEr
 		case "min":
 			rval, e := strconv.Atoi(r.reqVal)
 			if e != nil {
-				return nil, ErrInvalidTag
+				return nil, e
 			}
 			if rval > val {
 				errs = append(errs, ValidationError{
@@ -85,7 +85,7 @@ func validateInt(fieldName string, val int, tag reflect.StructTag) (ValidationEr
 		case "max":
 			rval, e := strconv.Atoi(r.reqVal)
 			if e != nil {
-				return nil, ErrInvalidTag
+				return nil, e
 			}
 			if val > rval {
 				errs = append(errs, ValidationError{
@@ -122,7 +122,7 @@ func validateString(fieldName string, val string, tag reflect.StructTag) (Valida
 		case "len":
 			rval, e := strconv.Atoi(r.reqVal)
 			if e != nil {
-				return nil, ErrInvalidTag
+				return nil, e
 			}
 			if rval != len(val) {
 				errs = append(errs, ValidationError{
@@ -133,7 +133,7 @@ func validateString(fieldName string, val string, tag reflect.StructTag) (Valida
 		case "regexp":
 			matched, e := regexp.MatchString(r.reqVal, val)
 			if e != nil {
-				return nil, ErrInvalidTag
+				return nil, e
 			}
 			if !matched {
 				errs = append(errs, ValidationError{

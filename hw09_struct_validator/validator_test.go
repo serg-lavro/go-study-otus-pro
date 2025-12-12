@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"strconv"
+	"strings"
 )
 
 type UserRole string
@@ -73,32 +75,32 @@ type (
 func TestBadTags(t *testing.T) {
 	t.Run("bad tag value for max", func(t *testing.T) {
 		err := Validate(TestBadTagMax{1})
-		if !errors.Is(err, ErrInvalidTag) {
-			t.Errorf("failed to receive tag error")
+		if !errors.Is(err, strconv.ErrSyntax) {
+			t.Errorf("failed to receive strconv.Syntax, got %v", err)
 		}
 	})
 	t.Run("bad tag value for min", func(t *testing.T) {
 		err := Validate(TestBadTagMin{1})
-		if !errors.Is(err, ErrInvalidTag) {
-			t.Errorf("failed to receive tag error")
+		if !errors.Is(err, strconv.ErrSyntax) {
+			t.Errorf("failed to receive strconv.Syntax, got %v", err)
 		}
 	})
 	t.Run("bad tag value int type", func(t *testing.T) {
 		err := Validate(TestBadTagForInt{1})
 		if !errors.Is(err, ErrInvalidTag) {
-			t.Errorf("failed to receive tag error")
+			t.Errorf("failed to receive tag error, got %v", err)
 		}
 	})
 	t.Run("bad tag value for len", func(t *testing.T) {
 		err := Validate(TestBadTagLen{"abc"})
-		if !errors.Is(err, ErrInvalidTag) {
-			t.Errorf("failed to receive tag error")
+		if !errors.Is(err, strconv.ErrSyntax) {
+			t.Errorf("failed to receive strconv.Syntax, got %v", err)
 		}
 	})
 	t.Run("bad tag value for regexp", func(t *testing.T) {
 		err := Validate(TestBadTagRegexp{"abc"})
-		if !errors.Is(err, ErrInvalidTag) {
-			t.Errorf("failed to receive tag error")
+		if err == nil || !strings.Contains(err.Error(), "error parsing regexp") {
+			t.Errorf("expected regexp error, got %v", err)
 		}
 	})
 }
