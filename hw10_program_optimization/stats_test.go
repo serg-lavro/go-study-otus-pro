@@ -5,9 +5,39 @@ package hw10programoptimization
 import (
 	"bytes"
 	"testing"
+	"archive/zip"
+	"io"
 
 	"github.com/stretchr/testify/require"
 )
+
+func BenchmarkGetDomainStat(b *testing.B) {
+    r, err := zip.OpenReader("testdata/users.dat.zip")
+    if err != nil {
+        b.Fatal(err)
+    }
+    defer r.Close()
+
+    data, err := r.File[0].Open()
+    if err != nil {
+        b.Fatal(err)
+    }
+    defer data.Close()
+
+    fileData, err := io.ReadAll(data)
+    if err != nil {
+        b.Fatal(err)
+    }
+
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        rdr := bytes.NewReader(fileData)
+        _, err := GetDomainStat(rdr, "biz")
+        if err != nil {
+            b.Fatalf("GetDomainStat failed: %v", err)
+        }
+    }
+}
 
 func TestGetDomainStat(t *testing.T) {
 	data := `{"Id":1,"Name":"Howard Mendoza","Username":"0Oliver","Email":"aliquid_qui_ea@Browsedrive.gov","Phone":"6-866-899-36-79","Password":"InAQJvsq","Address":"Blackbird Place 25"}
