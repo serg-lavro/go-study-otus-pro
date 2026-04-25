@@ -6,7 +6,9 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -28,6 +30,9 @@ func main() {
 	fmt.Fprintf(os.Stderr, "...Connected to %s\n", addr)
 	defer client.Close()
 
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -48,5 +53,15 @@ func main() {
 		fmt.Fprintln(os.Stderr, "...Connection was closed by peer")
 	}()
 
+	go func() { // signal
+		sig, ok := <-signalCh
+		if ok {
+			fmt.Fprintf(os.Stderr, "...Got signal: %v\n", sig)
+			client.Close()
+		}
+	}()
+
 	wg.Wait()
+	signal.Stop(signalCh)
+	close(signalCh)
 }
